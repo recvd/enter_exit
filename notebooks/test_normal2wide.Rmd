@@ -1,0 +1,28 @@
+---
+title: "test_normal2wide"
+author: "Jesse Cahill"
+date: "December 4, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+df <- read_csv("test_r.csv")
+
+df_new <- df %>% 
+  gather(adr_net_firstyear_x_2014, adr_net_lastyear_x_2014, key="firstlast", value="Year") %>% 
+  arrange(adr_net_behid_u_2014, Year) %>% 
+  select(-firstlast)
+```
+
+
+```{r}
+df_new %>% 
+  group_by(adr_net_behid_u_2014) %>% 
+  expand(Year)
+```
+

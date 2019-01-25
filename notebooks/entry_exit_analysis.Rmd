@@ -1,0 +1,44 @@
+---
+title: "Entry-Exit Analysis"
+author: "Jesse Cahill"
+date: "January 24, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load packages
+library(here)
+library(tidyverse)
+source(here("get_colnames.R"))
+```
+
+# Read, Tidy
+To form an effective baseline, we'll look at entry/exit rates for all businesses using a 1 year interval. We'll add a variable for net business change (entry - exit) for each year, tract, and business type. We'll try analysis on both net change and entry/exit seprately.
+
+```{r}
+yr1_path <- here("data", "final", "nets_philly_entryExit_1yrInterval.csv")
+col_names <- get_colnames(yr1_path)
+data <- read_csv(yr1_path, skip=3, col_names = col_names)
+```
+
+```{r}
+data_tidy <- data %>% 
+  gather("key", "value", ends_with("enter_year"), ends_with("exit_year")) %>% 
+  separate(key, into=c("business_type", "year_type"), sep="\\.") %>% 
+  spread(year_type, value) %>% 
+  mutate(net = enter_year - exit_year)
+```
+
+# Baseline Analysis - 1 Year Intervals, Total business count
+
+```{r}
+total <- data_tidy %>% 
+  filter(business_type == "TOTAL")
+total
+```
+
+  
