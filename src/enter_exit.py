@@ -15,6 +15,7 @@ def enter_exit(df, subset_cat="Total", interval_length=None):
 
     # Enter and exit year per business per tract
     business_rate = df.replace({"adr_net_lastyear_x_2014": 2014}, np.nan) \
+        .replace({"adr_net_firstyear_x_2014": 1990}, np.nan) \
         .groupby(["adr_net_dunsnumber_x_2014", "t10_cen_uid_u_2010"]).agg({
         'adr_net_firstyear_x_2014': min,
         'adr_net_lastyear_x_2014': max
@@ -25,14 +26,16 @@ def enter_exit(df, subset_cat="Total", interval_length=None):
         .size() \
         .rename_axis(["t10_cen_uid_u_2010", "year"], axis="index") \
         .rename("enter_year")
+    idx_enter = enter_year.index
+    enter_year.index.set_levels(idx_enter.levels[-1].astype(int), level="year", inplace=True)
 
     exit_year = business_rate.reset_index(drop=False).groupby(["t10_cen_uid_u_2010", "exit_year"]) \
         .size() \
         .rename_axis(["t10_cen_uid_u_2010", "year"], axis="index") \
         .rename("exit_year")
     # Change year index to int for datetime conversion
-    idx = exit_year.index
-    exit_year.index.set_levels(idx.levels[-1].astype(int), level="year", inplace=True)
+    idx_exit = exit_year.index
+    exit_year.index.set_levels(idx_exit.levels[-1].astype(int), level="year", inplace=True)
 
     # Enter and exit count per tract per year
     df_tract_year_count = pd.concat([enter_year, exit_year], axis=1) \
@@ -58,6 +61,7 @@ def enter_exit_multicat(df, cat_list, interval_length=None):
     df_list = [enter_exit(df, subset_cat=cat, interval_length=interval_length) for cat in cat_list]
 
     return pd.concat(df_list, axis=1).fillna(0)
+
 
 if __name__ == "__main__":
     from pathlib import Path
