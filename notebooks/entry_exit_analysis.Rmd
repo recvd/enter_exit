@@ -1,5 +1,5 @@
 ---
-title: "Entry-Exit Analysis"
+title: "Tract-Level Entry-Exit Analysis, Philadelphia"
 author: "Jesse Cahill"
 date: "January 24, 2019"
 output: html_document
@@ -13,8 +13,16 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load packages
 library(here)
 library(tidyverse)
-source(here("get_colnames.R"))
+library(viridis)
+source(here("src", "get_colnames.R"))
 ```
+
+# Introduction
+**Regarding Intervals**:
+  The system of using intervals to describe when businesses come into and go out of business can be inherently confusing.  Some notes:
+  - The NETS data for a year is based on a survey taken in January of that year.  So, if a business appears for the first time in 2002, it ACTUALLY showed up some time in 2001 and was not seen until the next survey.  Entry is one year behind NETS records.
+  - If a business is seen for the last time in 2009, that means it was present in January of 2009 but not January of 2010.  Therefore, exit is concurrent with NETS records. 
+  - When we plot The way entryies and exits will be formatted moving forward is left aligned, they'll show up for the first
 
 # Read, Tidy
 To form an effective baseline, we'll look at entry/exit rates for all businesses using a 1 year interval. We'll add a variable for net business change (entry - exit) for each year, tract, and business type. We'll try analysis on both net change and entry/exit seprately.
@@ -25,20 +33,114 @@ col_names <- get_colnames(yr1_path)
 data <- read_csv(yr1_path, skip=3, col_names = col_names)
 ```
 
+
 ```{r}
-data_tidy <- data %>% 
+# net and enter/exit data separated due to index differences
+tidy_net <- data %>% 
   gather("key", "value", ends_with("enter_year"), ends_with("exit_year")) %>% 
   separate(key, into=c("business_type", "year_type"), sep="\\.") %>% 
+  mutate(business_type = as_factor(business_type)) %>% 
   spread(year_type, value) %>% 
-  mutate(net = enter_year - exit_year)
+  mutate(net = enter_year - exit_year) %>% 
+  select(t10_cen_uid_u_2010, year, business_type, net)
+  
+tidy_entex <- data %>% 
+  gather("key", "value", ends_with("enter_year"), ends_with("exit_year")) %>% 
+  separate(key, into=c("business_type", "year_type"), sep="\\.") %>% 
+  mutate(business_type = as_factor(business_type)) %>% 
+  spread(year_type, value) %>% 
+  gather("behavior", "num_businesses", enter_year, exit_year)
+
 ```
 
 # Baseline Analysis - 1 Year Intervals, Total business count
 
 ```{r}
-total <- data_tidy %>% 
+total_net <- tidy_net %>% 
   filter(business_type == "TOTAL")
-total
+
+total_entex <- tidy_entex %>% 
+  filter(business_type == "TOTAL")
 ```
 
+
+## Time Series Line Graphs
+
+### Aggregated by Year
+
+```{r}
+
+net_time <- ggplot(total_net, aes(
+  x = year,
+  y = net
+)) + 
+  stat_summary(fun.y = "mean", geom="line") +
+  ggtitle("Mean Tract-Level Net Business Change, Philadelphia")
+
+entex_time <- ggplot(total_entex, aes(
+  x = year,
+  y = num_businesses,
+  color = behavior
+)) + 
+  stat_summary(fun.y = "mean", geom="line") +
+  ggtitle("Mean Tract-Level Enter/Exit Business Rates, Philadelphia")
+
+
+net_time
+entex_time
+```
+
+This is interesting due to things we've seen previously showing that nearly every business type shows a dip in total number of US businesses in 2010, with a subsequent recovery in 2011. In Philly overall business growth dropped from a net *+*~27 per tract in 2008 to ~*-*25 per tract in 2009.  By 2010, which historically we believed was the low point of the Great Recession in terms of business numbers, net change of businesses is already recovered to +10. After thinking back more, I realized that this is likely due to the way the NETS is structured, taking a snapshot in January.  The dip in businesses in 2010 actually occured in 2009 but wasn't shown until January of 2010.
+
+We can add further granularity by looking at entry and exit rates specifically. Exit rates have a huge increase between 2008 and 2009, but go back nearly to normal again in 2010. Entry rates experience an unremarkable dip between 2008 and 2009, then see a huge spike in 2010.
+
+## Continuous Categorical Stuff
+heatmaps, (year, type, faceted for entry/exit rates)
+
+### Net Change
+
+```{r}
+#factor out total, it'll just throw off the scale
+net_heat <- filter(tidy_net, business_type != "TOTAL") %>% 
+  group_by(year, business_type) %>% 
+  summarize(net = mean(net)) %>% 
+  ungroup() %>% 
+  filter(!is.na(net))
+
+theme_heat <- theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank())
+
+plot <- ggplot(net_heat, aes(x = year, y = business_type)) +
+  geom_tile(aes(fill = net), color = "white") +
+  coord_fixed() + theme_heat + scale_fill_viridis() +
+  ggtitle("Time-Series Net Business Change Rate")
+
+plot
+```
+
+## Enter/Exit Change
+
+```{r}
+#factor out total, it'll just throw off the scale
+entex_heat <- filter(tidy_entex, business_type != "TOTAL") %>% 
+  group_by(year, business_type, behavior) %>% 
+  summarize(num_businesses = mean(num_businesses)) %>% 
+  ungroup() %>% 
+  filter(!is.na(num_businesses))
+
+plot1 <- ggplot(entex_heat, aes(x = year, y = business_type)) +
+  geom_tile(aes(fill = num_businesses), color = "white") +
+  coord_fixed() +
+  facet_grid(rows = vars(behavior)) +
+  theme_heat +
+  scale_fill_viridis() +
+  ggtitle("Time-Series Enter-Exit Rates")
+
+plot1
+```
+
+
+## Spatial maps
+Shiny app???
   
