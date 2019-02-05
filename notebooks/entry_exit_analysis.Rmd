@@ -95,7 +95,7 @@ This is interesting due to things we've seen previously showing that nearly ever
 We can add further granularity by looking at entry and exit rates specifically. Exit rates have a huge increase between 2008 and 2009, but go back nearly to normal again in 2010. Entry rates experience an unremarkable dip between 2008 and 2009, then see a huge spike in 2010.
 
 ## Continuous Categorical Stuff
-heatmaps, (year, type, faceted for entry/exit rates)
+**look at these again in terms of percent change from original values for better comparison**
 
 ### Net Change
 
@@ -113,11 +113,15 @@ theme_heat <- theme_classic() +
 
 plot <- ggplot(net_heat, aes(x = year, y = business_type)) +
   geom_tile(aes(fill = net), color = "white") +
-  coord_fixed() + theme_heat + scale_fill_viridis() +
+  coord_fixed() + theme_heat + 
+  scale_fill_distiller(palette = "RdBu") +
   ggtitle("Time-Series Net Business Change Rate")
 
 plot
 ```
+
+There's some big differences in color between WALH and the other two categories hehre, which makes it kind of difficult to discern differences between them.  Its difficult to discern anything from FFAH.  ACTH shows a noticible net decrease in 2009, and then a recovery in 2010.  2001 also seems to be a big year of growsh for both ACTH and WALH.   
+In 2001 we see some pretty drastic growth of WALH, and then a pretty big dropoff in 2004.  Relating to the recession, we see a net positive growth in 2007 which softens in 2008 and then bottoms out in 2009, only to rebound dbig in 2010.
 
 ## Enter/Exit Change
 
@@ -128,6 +132,7 @@ entex_heat <- filter(tidy_entex, business_type != "TOTAL") %>%
   summarize(num_businesses = mean(num_businesses)) %>% 
   ungroup() %>% 
   filter(!is.na(num_businesses))
+
 
 plot1 <- ggplot(entex_heat, aes(x = year, y = business_type)) +
   geom_tile(aes(fill = num_businesses), color = "white") +
@@ -140,7 +145,113 @@ plot1 <- ggplot(entex_heat, aes(x = year, y = business_type)) +
 plot1
 ```
 
+In hindsight this isn't the best way to look at things, we'll just plot timeseries instead.
+
+
+```{r, fig.width=10, fig.height=5}
+
+entex_timeseries <- ggplot(entex_heat, aes(x = year, y = num_businesses)) +
+  geom_line(aes(color = business_type)) +
+  coord_fixed() +
+  facet_grid(rows = vars(behavior)) +
+  ggtitle("Time-Series Enter-Exit Rates")
+
+net_timeseries <- ggplot(net_heat, aes(x = year, y = net)) +
+  geom_line(aes(color = business_type)) +
+  coord_fixed() +
+  ggtitle("Time-Series Net Change Rates")
+
+entex_timeseries
+net_timeseries
+```
+
 
 ## Spatial maps
-Shiny app???
-  
+**Shiny app???**
+```{r}
+library(sf)
+library(sp)
+
+philly_cbsa_shp <- here("gis", "philly_cbsa_tract_2010_merge")
+philly_cbsa_geo <- read_sf(philly_cbsa_shp)
+
+cbsa_geo_enterexit <- philly_cbsa_geo %>% 
+  inner_join(
+    mutate(tidy_entex, GEOID10 = as.character(t10_cen_uid_u_2010)))
+
+cbsa_geo_enterexit %>% 
+  filter(year==2010, business_type=="TOTAL") %>% 
+  ggplot() +
+  geom_sf(aes(fill=num_businesses)) +
+  facet_wrap(~behavior) +
+  scale_fill_viridis()
+
+
+```
+
+Tract level data is too granular for this big of an area, some center-city tracts with huge numbers are throwing off the scale of the whole thing. And even if the scale was right, the tracts in urban areas are so comparitively small we can't even see what their values are. We'll have to aggregate to a bigger geographic unit later on. 
+
+### Tract Level, City of Philadelphia
+If we zoom to a smaller unit of area we can examine things there on the tract level.
+
+```{r}
+philly_city_shp <- here("gis", "philly_tract_2010_merge")
+philly_city_geo <- read_sf(philly_city_shp) %>% 
+  st_transform(4326, check = TRUE)
+
+city_geo_enterexit <- philly_city_geo %>% 
+  inner_join(
+    mutate(tidy_entex, GEOID10 = as.character(t10_cen_uid_u_2010)) %>% 
+      select(-t10_cen_uid_u_2010)) %>% 
+  spread(behavior, num_businesses) %>% 
+  inner_join(
+    mutate(tidy_net, GEOID10 = as.character(t10_cen_uid_u_2010)) %>% 
+      select(-t10_cen_uid_u_2010)) 
+
+
+```
+```{r}
+#write this to file for shiny
+st_write(city_geo_enterexit, here("philly_enter_exit", "data.shp"))
+```
+
+Those few outliers are still making things a bit difficult for us. We see that often the same tracts show up brightly in the heatmaps of all maps, whether looking at entry rates, exit rates, or net change.  There are a few exceptions with high entry rates and net change in the northern part of the city, but these are largely centered around center city.  We have to impose some common scale on these data if we want to see how they change relative to themselves.
+
+
+### Interactive Maps
+
+```{r}
+write_csv(city_geo_enterexit)
+```
+
+```{r}
+library(leaflet)
+
+# m <- leaflet() %>% setView(lng = -75.1661, lat = 39.9534, zoom = 11)
+# m %>% addTiles()
+total_2010 <- city_geo_enterexit %>% 
+  filter(year==2010, business_type=="TOTAL")
+
+m <- leaflet(total_2010) %>%
+  setView(lng = -75.1125, lat = 39.9971, zoom = 10.5) %>%
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
+
+bins <- c(0, 10, 20, 50, 100, 200, 500, 1000, Inf)
+pal <- colorBin("viridis", domain = total_2010$num_businesses, bins = bins)
+
+m %>%
+  addTiles() %>% 
+  addPolygons(weight=1,
+              color="white",
+              fillColor = ~pal(num_businesses),
+              opacity=.2,
+              fillOpacity = .5) %>%
+  addLegend(pal = pal,
+            values = ~num_businesses,
+            opacity = 0.7,
+            title = NULL,
+  position = "bottomright")
+```
+
