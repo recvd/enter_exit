@@ -22,7 +22,6 @@ source(here("src", "get_colnames.R"))
   The system of using intervals to describe when businesses come into and go out of business can be inherently confusing.  Some notes:
   - The NETS data for a year is based on a survey taken in January of that year.  So, if a business appears for the first time in 2002, it ACTUALLY showed up some time in 2001 and was not seen until the next survey.  Entry is one year behind NETS records.
   - If a business is seen for the last time in 2009, that means it was present in January of 2009 but not January of 2010.  Therefore, exit is concurrent with NETS records. 
-  - When we plot The way entryies and exits will be formatted moving forward is left aligned, they'll show up for the first
 
 # Read, Tidy
 To form an effective baseline, we'll look at entry/exit rates for all businesses using a 1 year interval. We'll add a variable for net business change (entry - exit) for each year, tract, and business type. We'll try analysis on both net change and entry/exit seprately.

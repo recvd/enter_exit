@@ -2,7 +2,7 @@ library(shiny)
 library(leaflet)
 library(tidyverse)
 library(sf)
-
+library(here)
 
 data <- read_sf(here("philly_enter_exit")) 
 
@@ -47,7 +47,7 @@ shinyServer(function(input, output) {
         accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>% 
       addTiles() %>% 
       addPolygons(weight=1,
-                  color="white",
+                  color="red",
                   fillColor = ~pal(rate_type),
                   opacity=.5,
                   fillOpacity = .7) %>%
