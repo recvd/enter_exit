@@ -42,5 +42,8 @@ rsconnect/
 data/
 .Rproj.user
 
-#GIS/shapefiles
+# GIS/shapefiles
 gis/
+
+# Docucments
+docs/
