@@ -44,6 +44,10 @@ data/
 
 # GIS/shapefiles
 gis/
+*.shp
+*.dbf
+*.prj
+*.shx
 
 # Docucments
 docs/
