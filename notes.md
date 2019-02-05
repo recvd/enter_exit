@@ -10,11 +10,18 @@
 
 # Ideas
 
-- Graphs of actual business numbers rather than just change 
 - Changes in terms of percent of originial
 - Plot distribution histograms interactively, with a slider bar for time
+
+# TODO
+
+- Compute actual business numbers for each year, and percent change numbers (Use original data, wrangle a new file in python).  Try these numbers in the old graphs.
+- fix rendering
+- add hover tabs
+- fix color scales for lower frequency businesses
+- add map for entire cbsa by zip or county
 
 
 
 # Where We Left Off
-- Spatial join put everything in different columns which is throwing shit off, gotta fix it in arcmap
+- Interactive map up and running with bad rendering for Philly.
