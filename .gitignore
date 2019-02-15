@@ -51,3 +51,9 @@ gis/
 
 # Docucments
 docs/
+
+# Pycharm stuff
+*.idea/
+
+# Data
+*.csv
