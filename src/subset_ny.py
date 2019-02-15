@@ -34,6 +34,8 @@ def main():
             with open(data_path_out, "a", newline="\n") as f:
                 ny_chunk.to_csv(f, index=False, header=False)
 
+        print(i+1)
+
 
 if __name__ == "__main__":
     main()
