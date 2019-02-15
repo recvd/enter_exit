@@ -123,7 +123,7 @@ if __name__ == "__main__":
             "adr_net_walh_c_2014",
             "adr_net_ffah_c_2014",
             "t10_cen_uid_u_2010",
-            "m10_cen_uid_u_2010"    ]
+            "m10_cen_uid_u_2010"]
 
     df_philly = pd.read_csv(root_path / "data" / "raw" / "nets_philly_ACT_FFA_WAL.csv", usecols=cols)
 
