@@ -4,6 +4,7 @@ import pandas as pd
 
 from pathlib import Path
 
+
 def get_filename(search_term, dir):
     """Gets filenames containing search_term within dir"""
     all_matches = [x for x in os.listdir(dir) if search_term in x]
